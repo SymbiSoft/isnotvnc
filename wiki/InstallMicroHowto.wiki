@@ -1,5 +1,7 @@
 #First release for installation
 
+*isnotvnc______googlegroups.com for help!*
+
 = Intro =
 isNotVNC is not a heavy-tested-application. A lot of bugs could be in the code. That's my first mobile application.
 
@@ -29,3 +31,5 @@ java -jar isNotVNC.jar
 On your phone run script from PythonScriptShell and select the isNotVNV-Phone.py script. The GUI will ask you to connect to your PC / service.
 
 Enjoy!!
+
+*isnotvnc______googlegroups.com for help!*
