@@ -1,6 +1,6 @@
 #First release for installation
 
-*isnotvnc______googlegroups.com for help!*
+*isnotvnc - - - googlegroups.com for help!*
 
 = Intro =
 isNotVNC is not a heavy-tested-application. A lot of bugs could be in the code. That's my first mobile application.
@@ -32,4 +32,4 @@ On your phone run script from PythonScriptShell and select the isNotVNV-Phone.py
 
 Enjoy!!
 
-*isnotvnc______googlegroups.com for help!*
+*isnotvnc - - - googlegroups.com for help!*
