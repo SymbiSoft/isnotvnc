@@ -27,11 +27,13 @@ public class MyKeyListener implements KeyListener {
 	private PrintWriter pWriter=null;
 	private IsNotVNC isNotVNC=null;
 	
-	public void keyPressed(KeyEvent arg0) {
+	public void keyPressed(KeyEvent key) {
+		key.consume();
 		//System.out.println("pressed");
 	}
 
-	public void keyReleased(KeyEvent arg0) {
+	public void keyReleased(KeyEvent key) {
+		key.consume();
 		//System.out.println("released");
 		
 	}
