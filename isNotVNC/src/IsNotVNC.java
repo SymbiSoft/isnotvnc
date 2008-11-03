@@ -1,3 +1,22 @@
+/**
+ This file is part of isNotVNC.
+
+    isNotVNC is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    isNotVNC is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with isNotVNC.  If not, see <http://www.gnu.org/licenses/>.
+
+ */
+
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -17,10 +36,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
 import javax.swing.*;
-/**
- * Class that implements an SPP Server which accepts single line of
- * message from an SPP client and sends a single line of response to the client.
- */
+
 @SuppressWarnings("unused")
 public class IsNotVNC extends JFrame {
 
@@ -115,23 +131,7 @@ public class IsNotVNC extends JFrame {
 	protected void sendCommand(String command) {
 		pWriter.println(command);
 		pWriter.flush();
-		/*if(!command.equals("GET")) {
-			pWriter.println("GET");
-	        pWriter.flush();
-		}*/
-/*        try {
-			getGet();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		*/	
 	}
-	
-/*	protected void sendText(String text) {
-		pWriter.println(text);
-        pWriter.flush();
-        sendCommand("GET");
-	}*/
 	
 	protected void getGet() throws IOException {
 		if(!getScreen) {
