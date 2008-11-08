@@ -51,7 +51,7 @@ public class IsNotVNC extends JFrame {
     private class InnerThread extends Thread {
     	private IsNotVNC isNotVNC=null;
     	private boolean run=true;
-    	private long sleep=1000;
+    	private long sleep=500;
         InnerThread(IsNotVNC isNotVNC) {
           super();
           this.isNotVNC=isNotVNC;
@@ -133,20 +133,29 @@ public class IsNotVNC extends JFrame {
 		pWriter.flush();
 	}
 	
-	protected void getGet() throws IOException {
+	protected synchronized void getGet() throws IOException {
 		if(!getScreen) {
 			getScreen=true;
 			pWriter.println("GET");
 	        pWriter.flush();
-	        try {
-				Thread.sleep(500);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+			
+			int t=10; // wait max 1s (10x100=1000 ms)
+			
+			while(t>0 && inStream.available()==0){
+				try {
+					Thread.sleep(100);
+					
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
 			}
-			while(inStream.available()==0);
-			int l=inStream.read(bbuf);
-			//save(bbuf,l);
-			display(bbuf);
+			t--;
+			
+			if(t>0) {
+				int l=inStream.read(bbuf);
+				//save(bbuf,l);
+				display(bbuf);
+			}
 			getScreen=false;
 		}
 	}
