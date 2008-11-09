@@ -55,63 +55,81 @@ class BTReader:
 imagename="e:\Images\snap.jpg"
 bt=BTReader()
 bt.connect()
-bt.send("ciao\n")
 esegui=True
+received=""
 while(esegui):
 	try:
-		received=bt.read()
-		
+		if(len(received)==0):
+			received=bt.read()			
 		print "Received: "+received
 		if received.startswith('QUIT'):
 			print "Quitting"
 			esegui=False
+			received=received[4:]
 		elif received.startswith('GET'):
 			graphics.screenshot().save( imagename )
 			fh = file(imagename, 'rb');
 			bt.send(fh.read())
 			fh.close()
 			print "SENT SCREENSHOT!"
+			received=received[3:]
 		elif received.startswith('LSoft'):
 			e32.reset_inactivity()
+			received=received[5:]
 			keypress.simulate_key(EKeyLeftSoftkey,EKeyLeftSoftkey)
 		elif received.startswith('RSoft'):
 			e32.reset_inactivity()
+			received=received[5:]
 			keypress.simulate_key(EKeyRightSoftkey,EKeyRightSoftkey)
 		elif received.startswith('Left'):
 			e32.reset_inactivity()
+			received=received[4:]
 			keypress.simulate_key_mod(EKeyLeftArrow, EKeyLeftArrow,EModifierKeypad)
 		elif received.startswith('Right'):
+			received=received[5:]
 			e32.reset_inactivity()
 			keypress.simulate_key_mod(EKeyRightArrow, EKeyRightArrow,EModifierKeypad)
 		elif received.startswith('Up'):
+			received=received[2:]
 			e32.reset_inactivity()
 			keypress.simulate_key_mod(EKeyUpArrow, EKeyUpArrow,EModifierKeypad)
 		elif received.startswith('Down'):
 			e32.reset_inactivity()
+			received=received[4:]
 			keypress.simulate_key_mod(EKeyDownArrow, EKeyDownArrow,EModifierKeypad)
 		elif received.startswith('Backspace'):
 			e32.reset_inactivity()
+			received=received[9:]
 			keypress.simulate_key(EKeyBackspace,EKeyBackspace)
 		elif received.startswith('Del'):
 			e32.reset_inactivity()
+			received=received[3:]
 			keypress.simulate_key(EKeyBackspace,EKeyBackspace)
 		elif received.startswith('Yes'):
 			e32.reset_inactivity()
+			received=received[3:]
 			keypress.simulate_key(EKeyYes,EKeyYes)
 		elif received.startswith('No'):
 			keypress.simulate_key(EKeyNo,EKeyNo)
+			received=received[2:]
 			e32.reset_inactivity()
 		elif received.startswith('Menu'):
 			keypress.simulate_key(EKeyMenu,EKeyMenu)
+			received=received[4:]
 			e32.reset_inactivity()
 		elif received.startswith('Select'):
+			received=received[6:]
 			keypress.simulate_key(EKeySelect,EKeySelect)
 		elif received.startswith('Edit'):
 			e32.reset_inactivity()
+			received=received[4:]
 			keypress.simulate_key(EKeyEdit,EKeyEdit)
+		elif ord(received[0])<32 or ord(received[0])>125:
+			received=received[1:]
 		else:
 			e32.reset_inactivity()
 			key=ord(received[0])
+			received=received[1:]
 			keypress.simulate_key(key,key)
 			
 	except:
