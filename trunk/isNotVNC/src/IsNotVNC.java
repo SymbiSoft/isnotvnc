@@ -47,10 +47,10 @@ public class IsNotVNC extends JFrame {
     private InputStream inStream=null;
     MyKeyListener keyListener=new MyKeyListener();
     private boolean getScreen=false;
+    private boolean run=true;
     
     private class InnerThread extends Thread {
     	private IsNotVNC isNotVNC=null;
-    	private boolean run=true;
     	private long sleep=500;
         InnerThread(IsNotVNC isNotVNC) {
           super();
@@ -122,6 +122,7 @@ public class IsNotVNC extends JFrame {
 				}
 			}
 			exit=true;
+			run=false;
 			pWriter.flush();
 			pWriter.close();
 			streamConnNotifier.close();
