@@ -24,13 +24,13 @@ Someway create e:\Python and e:\Python\lib dirs on your phone.
 
 Download keypress *unsigned* (http://wiki.forum.nokia.com/index.php/How_to_simulate_a_keypress_in_PyS60) and do the same as for PythonScriptShell.
 
-Copy isNotVNV-Phone.py on your phone.
+Copy isNotVNC-Phone.py on your phone.
 
 Run the java program on your PC:
 
 java -jar isNotVNC.jar
 
-On your phone run script from PythonScriptShell and select the isNotVNV-Phone.py script. The GUI will ask you to connect to your PC / service.
+On your phone run script from PythonScriptShell and select the isNotVNC-Phone.py script. The GUI will ask you to connect to your PC / service.
 
 Enjoy!!
 
