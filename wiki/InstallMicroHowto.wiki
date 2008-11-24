@@ -1,3 +1,4 @@
+#labels Featured
 #First release for installation
 
 *isnotvnc - - - googlegroups.com for help!*
