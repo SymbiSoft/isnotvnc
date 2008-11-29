@@ -29,6 +29,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import javax.bluetooth.*;
 import javax.microedition.io.*;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -36,6 +37,8 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
 import javax.swing.*;
+
+import com.apple.cocoa.application.NSApplication;
 
 @SuppressWarnings("unused")
 public class IsNotVNC extends JFrame {
@@ -86,49 +89,47 @@ public class IsNotVNC extends JFrame {
 		StreamConnectionNotifier streamConnNotifier = (StreamConnectionNotifier)Connector.open( connectionString );
 		//Wait for client connection
 		System.out.println("\nServer Started. Waiting for clients to connect...");
-		boolean exit=false;
-		while(!exit) {
-			StreamConnection connection=streamConnNotifier.acceptAndOpen();
-			RemoteDevice dev = RemoteDevice.getRemoteDevice(connection);
-			System.out.println("Remote device address: "+dev.getBluetoothAddress());
-			//System.out.println("Remote device name: "+dev.getFriendlyName(true));
-			//read string from spp client
-			inStream=connection.openInputStream();
-			String lineRead="";
-			OutputStream outStream=connection.openOutputStream();
-			pWriter=new PrintWriter(new OutputStreamWriter(outStream));
-			
-			keyListener.setPrintWriter(pWriter);
-			keyListener.setMainAppl(this);
 
-			pWriter.println("Start");
-			pWriter.write("Begin String from isNotVNC\n");
-			pWriter.flush();
-			
-			InnerThread inThread=new InnerThread(this);
-			
-	        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-	        //sendGet();
-			while(lineRead==null || !lineRead.equals("QUIT")) {
-				if(inStream.available()>0) {
-					int l=inStream.read(bbuf);
-					System.out.println(new String(bbuf,0,l));
-				}
-				lineRead=in.readLine();
-				if(lineRead!=null) {
-					pWriter.println(lineRead);
-					pWriter.flush();
-					//sendCommand("GET");
-				}
-			}
-			exit=true;
-			run=false;
-			pWriter.flush();
-			pWriter.close();
-			streamConnNotifier.close();
-		}
+		StreamConnection connection=streamConnNotifier.acceptAndOpen();
+		RemoteDevice dev = RemoteDevice.getRemoteDevice(connection);
+		System.out.println("Remote device address: "+dev.getBluetoothAddress());
+		//System.out.println("Remote device name: "+dev.getFriendlyName(true));
+		//read string from spp client
+		inStream=connection.openInputStream();
+		OutputStream outStream=connection.openOutputStream();
+		
+		
+
+        loop(outStream);
+        
+        run=false;
+		pWriter.flush();
+		pWriter.close();
+		streamConnNotifier.close();
+
 	}
 	
+	private void loop(OutputStream outStream) throws IOException {
+		pWriter=new PrintWriter(new OutputStreamWriter(outStream));
+		keyListener.setPrintWriter(pWriter);		
+		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+		
+		InnerThread inThread=new InnerThread(this);
+		
+        String lineRead="";
+		while(lineRead==null || !lineRead.startsWith("QUIT")) {
+			if(inStream.available()>0) {
+				int l=inStream.read(bbuf);
+				System.out.println(new String(bbuf,0,l));
+			}
+			lineRead=in.readLine();
+			if(lineRead!=null) {
+				pWriter.println(lineRead);
+				pWriter.flush();
+			}
+		}
+	}
+
 	protected void sendCommand(String command) {
 		pWriter.println(command);
 		pWriter.flush();
@@ -161,7 +162,7 @@ public class IsNotVNC extends JFrame {
 		}
 	}
 
-	@SuppressWarnings("unused")
+
 	private void save(byte[] bbuf, int l) {
 		try {
 			File f=new File("/image.jpg");
@@ -189,14 +190,14 @@ public class IsNotVNC extends JFrame {
 		label.addKeyListener(keyListener);
 		
 		addButton(panel,"LSoft");
-		addButton(panel,"Select");
-		addButton(panel,"RSoft");
-		
-		addButton(panel,"Left");
 		addButton(panel,"Up");
+		addButton(panel,"RSoft");
+		addButton(panel,"Left");
+		addButton(panel,"Select");
 		addButton(panel,"Right");
-		addButton(panel,"Down");
 		addButton(panel,"GET");
+		addButton(panel,"Down");
+		addButton(panel,"QUIT");
 	    
 	    panel.addKeyListener(keyListener);
 	    
@@ -215,6 +216,118 @@ public class IsNotVNC extends JFrame {
 	    get.addKeyListener(keyListener);
 	    panel.add(get);
 	}
+	
+	/**
+	* Bounce the application's dock icon to get the user's attention.
+	* 
+	* ref: http://lists.apple.com/archives/java-dev/2003/Dec/msg00782.html
+	*
+	* @param critical Bounce the icon repeatedly if this is true. Bounce it
+	* only for one second (usually just one bounce) if this is false.
+	*/
+	public static void bounceDockIcon(boolean critical) {
+		int howMuch = (critical) ? NSApplication.UserAttentionRequestCritical
+				: NSApplication.UserAttentionRequestInformational;
+		final int requestID = NSApplication.sharedApplication()
+				.requestUserAttention(howMuch);
+		// Since NSApplication.requestUserAttention() seems to ignore the
+		// param and always bounces the dock icon continuously no matter
+		// what, make sure it gets cancelled if appropriate.
+		// This is Apple bug #3414391
+		if (!critical) {
+			Thread cancelThread = new Thread(new Runnable() {
+				public void run() {
+					try {
+						Thread.sleep(1000);
+					} catch (InterruptedException e) {
+						// ignore
+					}
+					NSApplication.sharedApplication()
+							.cancelUserAttentionRequest(requestID);
+				}
+			});
+			cancelThread.start();
+		}
+	}
+	
+	public void startClient() throws IOException {
+		Client client=new Client();
+		//display local d1evice address and name
+		LocalDevice localDevice = LocalDevice.getLocalDevice();
+		System.out.println("Address: "+localDevice.getBluetoothAddress());
+		System.out.println("Name: "+localDevice.getFriendlyName());
+		//find devices
+		DiscoveryAgent agent = localDevice.getDiscoveryAgent();
+		System.out.println("Starting device inquiry...");
+		agent.startInquiry(DiscoveryAgent.GIAC, client);
+		try {
+			synchronized(Client.lock){
+				Client.lock.wait();
+			}
+		}
+		catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		System.out.println("Device Inquiry Completed. ");
+		//print all devices in vecDevices
+		int deviceCount=Client.vecDevices.size();
+		if(deviceCount <= 0){
+			System.out.println("No Devices Found .");
+			System.exit(0);
+		}
+		else{
+			//print bluetooth device addresses and names in the format [ No. address (name) ]
+			System.out.println("Bluetooth Devices: ");
+			for (int i = 0; i <deviceCount; i++) {
+				RemoteDevice remoteDevice=(RemoteDevice)Client.vecDevices.elementAt(i);
+				System.out.println((i+1)+". "+remoteDevice.getBluetoothAddress()+" ("+remoteDevice.getFriendlyName(true)+")");
+			}
+		}
+		System.out.print("Choose Device index: ");
+		BufferedReader bReader=new BufferedReader(new InputStreamReader(System.in));
+		String chosenIndex=bReader.readLine();
+		int index=Integer.parseInt(chosenIndex.trim());
+		//check for spp service
+		RemoteDevice remoteDevice=(RemoteDevice)Client.vecDevices.elementAt(index-1);
+		UUID[] uuidSet = new UUID[1];
+		uuidSet[0]=new UUID("1101",true);
+		System.out.println("\nSearching for service...");
+		agent.searchServices(null,uuidSet,remoteDevice,client);
+		try {
+			synchronized(Client.lock){
+				Client.lock.wait();
+			}
+		}
+		catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		if(Client.connectionURL==null){
+			System.out.println("Device does not support Simple SPP Service.");
+			System.exit(0);
+		}
+		//connect to the server and send a line of text
+		StreamConnection streamConnection=(StreamConnection)Connector.open(Client.connectionURL);
+		//send string
+		OutputStream outStream=streamConnection.openOutputStream();
+		inStream=streamConnection.openInputStream();
+		
+		loop(outStream);
+		
+		inStream.close();
+		outStream.close();
+		streamConnection.close();
+		/*PrintWriter pWriter=new PrintWriter(new OutputStreamWriter(outStream));
+		pWriter.write("Test String from SPP Client\r\n");
+		pWriter.flush();
+		//read response
+		
+		BufferedReader bReader2=new BufferedReader(new InputStreamReader(inStream));
+		String lineRead=bReader2.readLine();
+		System.out.println(lineRead);
+		*/
+	}
+	
+	
 
 	public static void main(String[] args) throws IOException {
 		//display local device address and name
@@ -223,7 +336,8 @@ public class IsNotVNC extends JFrame {
 		System.out.println("Name: "+localDevice.getFriendlyName());
 		IsNotVNC isNotVNC=new IsNotVNC();
 		isNotVNC.startPanel();
-		isNotVNC.startServer();
+		//isNotVNC.startServer();
+		isNotVNC.startClient();
 	}
 
 }
