@@ -25,36 +25,57 @@ import java.io.PrintWriter;
 public class MyKeyListener implements KeyListener {
 	private static final long serialVersionUID = -3338512540370634056L;
 	private PrintWriter pWriter=null;
-	private IsNotVNC isNotVNC=null;
 	
 	public void keyPressed(KeyEvent key) {
+		switch (key.getKeyCode()) {
+		case 37:
+			pWriter.println("Left\n");
+			pWriter.flush();
+			break;
+		case 38:
+			pWriter.println("Up\n");
+			pWriter.flush();
+			break;
+		case 39:
+			pWriter.println("Right\n");
+			pWriter.flush();
+			break;
+		case 40:
+			pWriter.println("Down\n");
+			pWriter.flush();
+			break;
+		}
 		key.consume();
-		//System.out.println("pressed");
 	}
 
 	public void keyReleased(KeyEvent key) {
-		key.consume();
-		//System.out.println("released");
-		
+		key.consume();		
 	}
 
 	public void keyTyped(KeyEvent key) {
-		//System.out.println("typed");
-
 		char c=key.getKeyChar();
-		System.out.print(c);
-		pWriter.println(c);
+		if((int)c<=127) {
+			pWriter.println(c);
+		}
+		else {
+			switch(c) {
+			case 13:pWriter.println("Select");break;
+			case 10:pWriter.println("Select");break;
+			case '':pWriter.println("e'");break;
+			case '“':pWriter.println("i'");break;
+			case 'ˆ':pWriter.println("a'");break;
+			case '':pWriter.println("u'");break;
+			case '˜':pWriter.println("o'");break;
+			case 'Ž':pWriter.println("e'");break;
+			}
+		}
 		pWriter.flush();
 		key.consume();
-		//isNotVNC.sendCommand("GET");
+
 	}
 
 	public void setPrintWriter(PrintWriter writer) {
 		this.pWriter=writer;
-	}
-
-	public void setMainAppl(IsNotVNC isNotVNC) {
-		this.isNotVNC=isNotVNC;
 	}
 
 }
