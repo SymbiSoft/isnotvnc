@@ -6,6 +6,8 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.Vector;
+
+import javax.bluetooth.DataElement;
 import javax.bluetooth.DeviceClass;
 import javax.bluetooth.DiscoveryAgent;
 import javax.bluetooth.DiscoveryListener;
@@ -40,7 +42,8 @@ public class Client implements DiscoveryListener{
 				connectionURL=servRecord[i].getConnectionURL(ServiceRecord.NOAUTHENTICATE_NOENCRYPT,false);
 			}
 			System.out.println(connectionURL);
-			System.out.println(servRecord[i].getAttributeValue(0x100));
+			DataElement serviceName = servRecord[i].getAttributeValue(0x0100);
+			System.out.println(serviceName.getValue());
 		}
 		synchronized(lock){
 			lock.notify();
