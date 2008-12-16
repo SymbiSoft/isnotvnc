@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.Enumeration;
 import java.util.Properties;
@@ -402,6 +403,13 @@ public class IsNotVNC extends JFrame implements WindowListener {
 
 	public static void main(String[] args) throws IOException {
 		//display local device address and name
+		
+		PrintStream out=new PrintStream("/isnotvnc.log");
+		
+		System.setOut(out); 
+		System.setErr(out);
+		
+		
 		LocalDevice localDevice = LocalDevice.getLocalDevice();
 		System.out.println("Address: "+localDevice.getBluetoothAddress());
 		System.out.println("Name: "+localDevice.getFriendlyName());
