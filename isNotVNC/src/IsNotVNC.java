@@ -406,8 +406,8 @@ public class IsNotVNC extends JFrame implements WindowListener {
 		
 		PrintStream out=new PrintStream("/isnotvnc.log");
 		
-		System.setOut(out); 
-		System.setErr(out);
+		//System.setOut(out); 
+		//System.setErr(out);
 		
 		
 		LocalDevice localDevice = LocalDevice.getLocalDevice();
