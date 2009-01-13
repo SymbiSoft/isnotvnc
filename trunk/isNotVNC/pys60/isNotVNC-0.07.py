@@ -79,8 +79,7 @@ class BTReader:
 		while(esegui):
 			try:
 				if(len(received)==0):
-					received=bt.read()			
-				print "Received: "+received
+					received=bt.read()
 				if received.startswith('QUIT'):
 					print "Quitting"
 					esegui=False
@@ -90,7 +89,6 @@ class BTReader:
 					fh = file(imagename, 'rb');
 					bt.send(fh.read())
 					fh.close()
-					print "SENT SCREENSHOT!"
 					received=received[3:]
 				elif received.startswith('EKey0'):
 					e32.reset_inactivity()
@@ -163,7 +161,7 @@ class BTReader:
 				elif received.startswith('Del'):
 					e32.reset_inactivity()
 					received=received[3:]
-					keypress.simulate_key(EKeyBackspace,EKeyBackspace)
+					keypress.simulate_key(EKeyDelete,EKeyDelete)
 				elif received.startswith('Yes'):
 					e32.reset_inactivity()
 					received=received[3:]
@@ -173,12 +171,12 @@ class BTReader:
 					received=received[2:]
 					e32.reset_inactivity()
 				elif received.startswith('Menu'):
-					keypress.simulate_key(EKeyMenu,EKeyMenu)
+					keypress.simulate_key(EKeyMenu,EScancodeMenu)
 					received=received[4:]
 					e32.reset_inactivity()
 				elif received.startswith('Select'):
 					received=received[6:]
-					keypress.simulate_key(EKeySelect,EKeySelect)
+					keypress.simulate_key(EKeySelect,EScancodeSelect)
 				elif received.startswith('Edit'):
 					e32.reset_inactivity()
 					received=received[4:]
@@ -187,14 +185,24 @@ class BTReader:
 					e32.reset_inactivity()
 					key=ord(received[0])
 					received=received[1:]
-					keypress.simulate_key(key,key)
-				elif ord(received[0])<32 or ord(received[0])>127:
+					keypress.simulate_key(EKeyBackspace,EScancodeBackspace)
+				elif ord(received[0])==32:
+					e32.reset_inactivity()
+					key=ord(received[0])
 					received=received[1:]
+					keypress.simulate_key(EKeySpace,EKeySpace)
+				elif ord(received[0])<32:
+					received=received[1:]
+				elif ord(received[0])<65:
+					e32.reset_inactivity()
+					key=ord(received[0])
+					received=received[1:]
+					keypress.simulate_key(key,0,128)
 				else:
 					e32.reset_inactivity()
 					key=ord(received[0])
 					received=received[1:]
-					keypress.simulate_key(key,key)
+					keypress.simulate_key(key,0)
 			except:
 				pass
 	
