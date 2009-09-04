@@ -77,7 +77,10 @@ public class IsNotVNC extends JFrame implements WindowListener {
 	public void display(byte[] cbuf) {
 		try {
 			ImageIcon icon = new ImageIcon(cbuf);
+//			System.out.println(icon.getIconWidth()+" "+icon.getIconHeight());
 			screen.setIcon(icon);
+			screen.setSize(240,320);
+			
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -177,7 +180,7 @@ public class IsNotVNC extends JFrame implements WindowListener {
 				}
 			}
 			
-		});
+		},1);
 		connectionFrame.add(connectionPanel);
 
 		connectionFrame.setVisible(true);
@@ -196,20 +199,26 @@ public class IsNotVNC extends JFrame implements WindowListener {
 		mainFrame.setSize(300,500);
 		JPanel mainPanel = new JPanel();
 		mainPanel.setBackground(Color.CYAN);
+		mainPanel.setLayout(null);
 
 		screen.setText("SCREEN");
+		screen.setSize(240,320);
+		screen.setLocation(30,10);
 		mainPanel.add(screen);
+		
 		//label.addKeyListener(keyListener);
 		
-		addButton(mainPanel,"LSoft");
-		addButton(mainPanel,"Up");
-		addButton(mainPanel,"RSoft");
-		addButton(mainPanel,"Left");
-		addButton(mainPanel,"Select");
-		addButton(mainPanel,"Right");
-		addButton(mainPanel,"GET");
-		addButton(mainPanel,"Down");
-		addButton(mainPanel,"QUIT");
+		addButton(mainPanel,"LSoft",1);
+		addButton(mainPanel,"Up",2);
+		addButton(mainPanel,"RSoft",3);
+		addButton(mainPanel,"Left",4);
+		addButton(mainPanel,"Select",5);
+		addButton(mainPanel,"Right",6);
+		addButton(mainPanel,"GET",7);
+		addButton(mainPanel,"Down",8);
+		addButton(mainPanel,"QUIT",9);
+		
+		
 	    
 	    mainPanel.addKeyListener(keyListener);
 	    
@@ -231,16 +240,21 @@ public class IsNotVNC extends JFrame implements WindowListener {
 		
 	}
 	
-	private void addButton(JPanel panel, String command) {
-		addButton(panel, command, keyListener, new ButtonActionListener(command,comm));
+	private void addButton(JPanel panel, String command, int order) {
+		addButton(panel, command, keyListener, new ButtonActionListener(command,comm),order);
 	}
 	
-	private void addButton(JPanel panel, String command, KeyListener k, ActionListener actionListener) {
+	private void addButton(JPanel panel, String command, KeyListener k, ActionListener actionListener,int order) {
 		JButton get = new JButton(command);
+		order--;
+		int r=order/3;
+		int c=order%3;
 
 	    get.addActionListener(actionListener);
 	    get.addKeyListener(k);
 	    panel.add(get);
+	    get.setLocation(20+c*90,330+r*35);
+	    get.setSize(80, 30);
 	}
 	
 	/**
