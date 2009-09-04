@@ -29,6 +29,12 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketAddress;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.util.Enumeration;
 import java.util.Properties;
 import java.util.Vector;
@@ -52,194 +58,188 @@ import com.apple.cocoa.application.NSApplication;
 public class IsNotVNC extends JFrame implements WindowListener {
 
 	private static final long serialVersionUID = 913025249206080080L;
-	private JLabel label = new JLabel();
-	private PrintWriter pWriter=null;
-    private byte[] bbuf=new byte[128000];
-    private InputStream inStream=null;
-    MyKeyListener keyListener=new MyKeyListener();
-    private boolean getScreen=false;
-    private boolean run=true;
+	private JLabel screen = new JLabel();
+	
+    private MyKeyListener keyListener=new MyKeyListener();
+    private Frame mainFrame=new Frame();
+    private Frame connectionFrame=new Frame("Connection setting");
     
-    private class InnerThread extends Thread {
-    	private IsNotVNC isNotVNC=null;
-    	private long sleep=500;
-        InnerThread(IsNotVNC isNotVNC) {
-          super();
-          this.isNotVNC=isNotVNC;
-          start();
-        }
+    private boolean protocol=false;
+    private static final boolean TCP=false;
+    private static final boolean BT=true;
+    
+    private boolean mode=false;
+    private static final boolean CLIENT=false;
+    private static final boolean SERVER=true;
+    
+    private Communication comm=null;
 
-        public void run() {
-          while (run) {
-            try {
-				isNotVNC.getGet();
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
-            
-            try {
-              sleep(sleep);
-            } catch (InterruptedException e) {
-              throw new RuntimeException(e);
-            }
-          }
-        }
-      }
-
-	//start server
-	private void startServer() throws IOException{
-
-		//Create a UUID for SPP
-		UUID uuid = new UUID("1101", true);
-		//Create the servicve url
-		String connectionString = "btspp://localhost:" + uuid +";name=isNotVNC";
-		//open server url
-		StreamConnectionNotifier streamConnNotifier = (StreamConnectionNotifier)Connector.open( connectionString );
-		//Wait for client connection
-		System.out.println("\nServer Started. Waiting for clients to connect...");
-
-		StreamConnection connection=streamConnNotifier.acceptAndOpen();
-		RemoteDevice dev = RemoteDevice.getRemoteDevice(connection);
-		System.out.println("Remote device address: "+dev.getBluetoothAddress());
-		//System.out.println("Remote device name: "+dev.getFriendlyName(true));
-		//read string from spp client
-		inStream=connection.openInputStream();
-		OutputStream outStream=connection.openOutputStream();
-		
-		
-
-        loop(outStream);
-        
-        run=false;
-		pWriter.flush();
-		pWriter.close();
-		streamConnNotifier.close();
-
-	}
-	
-	private void loop(OutputStream outStream) throws IOException {
-		pWriter=new PrintWriter(new OutputStreamWriter(outStream));
-		keyListener.setPrintWriter(pWriter);		
-		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-		
-		InnerThread inThread=new InnerThread(this);
-		
-        String lineRead="";
-		while(lineRead==null || !lineRead.startsWith("QUIT")) {
-			if(inStream.available()>0) {
-				int l=inStream.read(bbuf);
-				System.out.println(new String(bbuf,0,l));
-			}
-			lineRead=in.readLine();
-			if(lineRead!=null) {
-				pWriter.println(lineRead);
-				pWriter.flush();
-			}
-		}
-	}
-
-	protected void sendCommand(String command) {
-		pWriter.println(command);
-		pWriter.flush();
-	}
-	
-	protected synchronized void getGet() throws IOException {
-		if(!getScreen) {
-			getScreen=true;
-			pWriter.println("GET");
-	        pWriter.flush();
-			
-			int t=10; // wait max 1s (10x100=1000 ms)
-			
-			while(t>0 && inStream.available()==0){
-				try {
-					Thread.sleep(100);
-					
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-			t--;
-			
-			if(t>0) {
-				int l=inStream.read(bbuf);
-				//save(bbuf,l);
-				display(bbuf);
-			}
-			getScreen=false;
-		}
-	}
-
-
-	private void save(byte[] bbuf, int l) {
+	public void display(byte[] cbuf) {
 		try {
-			File f=new File("/image.jpg");
-			FileOutputStream fo=new FileOutputStream(f);
-			fo.write(bbuf, 0, l);
-			fo.flush();
-			fo.close();
+			ImageIcon icon = new ImageIcon(cbuf);
+			screen.setIcon(icon);
 		}
 		catch(Exception e) {
 			e.printStackTrace();
 		}
 	}
+	
+	private void startConnectionPanel() {
+		Rectangle bounds = this.getGraphicsConfiguration().getBounds();
+		connectionFrame.setLocation(300 + bounds.x, 20 + bounds.y);
 
-	private void display(byte[] cbuf) {
-		try {
-			ImageIcon icon = new ImageIcon(cbuf);
-			label.setIcon(icon);
-		}
-		catch(Exception e) {}
+		connectionFrame.setSize(300,100);
+		JPanel connectionPanel = new JPanel();
+		connectionPanel.setBackground(Color.LIGHT_GRAY);
+		
+		JRadioButton tcpButton = new JRadioButton("TCP");
+		tcpButton.setMnemonic(KeyEvent.VK_B);
+		tcpButton.setActionCommand("TCP");
+		tcpButton.setSelected(protocol);
+
+		JRadioButton btButton = new JRadioButton("BT");
+		btButton.setMnemonic(KeyEvent.VK_C);
+		btButton.setActionCommand("BT");
+		btButton.setSelected(protocol);
+
+		final JRadioButton clientButton = new JRadioButton("CLIENT");
+		clientButton.setMnemonic(KeyEvent.VK_D);
+		clientButton.setActionCommand("CLIENT");
+		clientButton.setSelected(mode);
+		
+		final JRadioButton serverButton = new JRadioButton("SERVER");
+		serverButton.setMnemonic(KeyEvent.VK_R);
+		serverButton.setActionCommand("SERVER");
+		serverButton.setSelected(mode);
+
+		    //Group the radio buttons.
+		ButtonGroup protocolGroup = new ButtonGroup();
+		protocolGroup.add(tcpButton);
+		protocolGroup.add(btButton);
+		
+		ButtonGroup modeGroup = new ButtonGroup();
+		modeGroup.add(clientButton);
+		modeGroup.add(serverButton);
+
+		ActionListener al=new ActionListener() {
+
+			public void actionPerformed(ActionEvent e) {
+				String command=e.getActionCommand();
+				if(command.equals("TCP")) {
+					protocol=TCP;
+					serverButton.setSelected(false);
+					clientButton.setSelected(true);
+					
+					mode=CLIENT;
+				}
+				if(command.equals("BT")) {
+					protocol=BT;
+				}
+				if(command.equals("CLIENT")) {mode=CLIENT;}
+				if(command.equals("SERVER")) {protocol=SERVER;}
+			}
+		};
+
+		    //Register a listener for the radio buttons.
+		tcpButton.addActionListener(al);
+		btButton.addActionListener(al);
+		clientButton.addActionListener(al);
+		serverButton.addActionListener(al);
+
+		JPanel protocolPanel = new JPanel(new GridLayout(0, 1));
+		protocolPanel.add(tcpButton);
+		protocolPanel.add(btButton);
+		
+		JPanel modePanel = new JPanel(new GridLayout(0, 1));
+		modePanel.add(clientButton);
+		modePanel.add(serverButton);
+		
+		connectionPanel.add(protocolPanel);
+		connectionPanel.add(modePanel);
+
+		addButton(connectionPanel,"GO!!",new KeyListener() {
+			public void keyPressed(KeyEvent arg0) {}
+			public void keyReleased(KeyEvent arg0) {}
+			public void keyTyped(KeyEvent arg0) {}
+			
+		},
+		new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				connectionFrame.setVisible(false);
+				
+				startPanel("Connected");
+				try {
+					if(mode==SERVER && protocol==BT) comm.startServerBluetooth();
+					if(mode==CLIENT && protocol==BT) comm.startClientBluetooth();
+					if(mode==CLIENT && protocol==TCP) comm.startClientTcp();
+				} catch (IOException ex) {
+					ex.printStackTrace();
+				}
+			}
+			
+		});
+		connectionFrame.add(connectionPanel);
+
+		connectionFrame.setVisible(true);
+	}
+	
+	public Communication getCommunication() {
+		return comm;
 	}
 
-	private void startPanel() {
-		setSize(300,500);
-		JPanel panel = new JPanel();
-		panel.setBackground(Color.CYAN);
+	private void startPanel(String connectionName) {
+		comm=new Communication(this);
+		mainFrame.setTitle(connectionName);
+		Rectangle bounds = this.getGraphicsConfiguration().getBounds();
+		mainFrame.setLocation(bounds.x, bounds.y);
 
-		panel.add(label);
-		label.addKeyListener(keyListener);
+		mainFrame.setSize(300,500);
+		JPanel mainPanel = new JPanel();
+		mainPanel.setBackground(Color.CYAN);
+
+		screen.setText("SCREEN");
+		mainPanel.add(screen);
+		//label.addKeyListener(keyListener);
 		
-		addButton(panel,"LSoft");
-		addButton(panel,"Up");
-		addButton(panel,"RSoft");
-		addButton(panel,"Left");
-		addButton(panel,"Select");
-		addButton(panel,"Right");
-		addButton(panel,"GET");
-		addButton(panel,"Down");
-		addButton(panel,"QUIT");
+		addButton(mainPanel,"LSoft");
+		addButton(mainPanel,"Up");
+		addButton(mainPanel,"RSoft");
+		addButton(mainPanel,"Left");
+		addButton(mainPanel,"Select");
+		addButton(mainPanel,"Right");
+		addButton(mainPanel,"GET");
+		addButton(mainPanel,"Down");
+		addButton(mainPanel,"QUIT");
 	    
-	    panel.addKeyListener(keyListener);
+	    mainPanel.addKeyListener(keyListener);
 	    
-		this.getContentPane().add(panel);
+		//this.getContentPane().add(mainPanel);
+	    mainFrame.add(mainPanel);
 
-		setVisible(true);
+	    mainFrame.setVisible(true);
+	    mainPanel.setVisible(true);
+	    screen.setVisible(true);
+	    
 		addWindowListener(this);
 		
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 		      public void run() {
 		        System.out.println("Running Shutdown Hook");
-		        if(pWriter!=null) {
-		        	try {
-		        		pWriter.println("QUIT");
-						Thread.sleep(1000);
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-		        }
+		        if(comm!=null) comm.quit();
 		      }
 		    });
 		
 	}
 	
 	private void addButton(JPanel panel, String command) {
+		addButton(panel, command, keyListener, new ButtonActionListener(command,comm));
+	}
+	
+	private void addButton(JPanel panel, String command, KeyListener k, ActionListener actionListener) {
 		JButton get = new JButton(command);
 
-	    ActionListener actionListener = new ButtonActionListener(command,this);
-		
 	    get.addActionListener(actionListener);
-	    get.addKeyListener(keyListener);
+	    get.addKeyListener(k);
 	    panel.add(get);
 	}
 	
@@ -275,131 +275,7 @@ public class IsNotVNC extends JFrame implements WindowListener {
 			cancelThread.start();
 		}
 	}
-	
-	public void startClient() throws IOException {
-		Client client=new Client();
-		//display local d1evice address and name
-		LocalDevice localDevice = LocalDevice.getLocalDevice();
-		System.out.println("Address: "+localDevice.getBluetoothAddress());
-		System.out.println("Name: "+localDevice.getFriendlyName());
-		//find devices
-		
-		Client.connectionURL=getSavedUrl();
-		if(Client.connectionURL==null)
-		{
-			DiscoveryAgent agent = localDevice.getDiscoveryAgent();
-			System.out.println("Starting device inquiry...");
-			agent.startInquiry(DiscoveryAgent.GIAC, client);
-			try {
-				synchronized(Client.lock){
-					Client.lock.wait();
-				}
-			}
-			catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-			System.out.println("Device Inquiry Completed. ");
-			//print all devices in vecDevices
-					
-			int deviceCount=Client.vecDevices.size();
-			if(deviceCount <= 0){
-				System.out.println("No Devices Found .");
-				System.exit(0);
-			}
-			else{
-				//print bluetooth device addresses and names in the format [ No. address (name) ]
-				System.out.println("Bluetooth Devices: ");
-				for (int i = 0; i <deviceCount; i++) {
-					RemoteDevice remoteDevice=(RemoteDevice)Client.vecDevices.elementAt(i);
-					System.out.println((i+1)+". "+remoteDevice.getBluetoothAddress()+" ("+remoteDevice.getFriendlyName(true)+")");
-				}
-			}
-			System.out.print("Choose Device index: ");
-			BufferedReader bReader=new BufferedReader(new InputStreamReader(System.in));
-			String chosenIndex=bReader.readLine();
-			int index=Integer.parseInt(chosenIndex.trim());
-			//check for spp service
-			RemoteDevice remoteDevice=(RemoteDevice)Client.vecDevices.elementAt(index-1);
-			UUID[] uuidSet = new UUID[1];
-			uuidSet[0]=new UUID("1101",true);
-			System.out.println("\nSearching for service...");
-			agent.searchServices(null,uuidSet,remoteDevice,client);
-			try {
-				synchronized(Client.lock){
-					Client.lock.wait();
-				}
-			}
-			catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-			if(Client.connectionURL==null){
-				System.out.println("Device does not support Simple SPP Service.");
-				System.exit(0);
-			}
-			
-			saveList(Client.connectionURL,remoteDevice);
-		}
-		
-		//connect to the server and send a line of text
-		StreamConnection streamConnection=(StreamConnection)Connector.open(Client.connectionURL);
-		//send string
-		OutputStream outStream=streamConnection.openOutputStream();
-		inStream=streamConnection.openInputStream();
-		
-		loop(outStream);
-		
-		inStream.close();
-		outStream.close();
-		streamConnection.close();
-	}
 
-	private String getSavedUrl() {
-		String r=null;
-		Properties p=new Properties();
-		try {
-			int k=0;
-			try {
-				Vector<String> urls=new Vector<String>();
-				p.load(new FileInputStream("/isNotVNC.devices"));
-				System.out.println("0. Search new device");
-				Enumeration<Object> e=p.keys();
-				while(e.hasMoreElements()) {
-					String url=(String)e.nextElement();
-					String device=p.getProperty(url);
-					urls.addElement(url);
-					System.out.println((k+1)+". "+device);
-					k++;
-				}
-				BufferedReader bReader=new BufferedReader(new InputStreamReader(System.in));
-				String chosenIndex=bReader.readLine();
-				int index=Integer.parseInt(chosenIndex.trim());
-				if(index!=0) r=urls.elementAt(index-1);
-			}
-			catch (Exception e) {}
-			
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return r;
-	}
-
-	private void saveList(String connectionURL, RemoteDevice remoteDevice) {
-		Properties p=new Properties();
-		try {
-			try {
-			p.load(new FileInputStream("/isNotVNC.devices"));
-			}
-			catch (Exception e) {}
-			String device=p.getProperty(connectionURL);
-			if(device==null) {
-				p.put(connectionURL, remoteDevice.getFriendlyName(true));
-				p.store(new FileOutputStream("/isNotVNC.devices"), "isNotVNC known devices");
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		
-	}
 
 	public static void main(String[] args) throws IOException {
 		//display local device address and name
@@ -414,44 +290,50 @@ public class IsNotVNC extends JFrame implements WindowListener {
 		System.out.println("Address: "+localDevice.getBluetoothAddress());
 		System.out.println("Name: "+localDevice.getFriendlyName());
 		IsNotVNC isNotVNC=new IsNotVNC();
-		isNotVNC.startPanel();
-		//isNotVNC.startServer();
-		isNotVNC.startClient();
+		
+		//isNotVNC.startConnectionPanel();
+		
+		//connectionFrame.setVisible(false);
+		
+		
+		isNotVNC.startPanel("Connected");
+		try {
+			isNotVNC.getCommunication().startClientBluetooth();
+		} catch (IOException ex) {
+			ex.printStackTrace();
+		}
 	}
 
 	public void windowActivated(WindowEvent arg0) {
-		// TODO Auto-generated method stub
 		
 	}
 
 	public void windowClosed(WindowEvent arg0) {
-		// TODO Auto-generated method stub
 		
 	}
 
 	public void windowClosing(WindowEvent arg0) {
 		System.exit(0);
-		
 	}
 
 	public void windowDeactivated(WindowEvent arg0) {
-		// TODO Auto-generated method stub
 		
 	}
 
 	public void windowDeiconified(WindowEvent arg0) {
-		// TODO Auto-generated method stub
 		
 	}
 
 	public void windowIconified(WindowEvent arg0) {
-		// TODO Auto-generated method stub
 		
 	}
 
 	public void windowOpened(WindowEvent arg0) {
-		// TODO Auto-generated method stub
 		
+	}
+
+	public MyKeyListener getKeyListener() {
+		return keyListener;
 	}
 
 }
