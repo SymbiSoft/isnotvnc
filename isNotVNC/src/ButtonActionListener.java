@@ -22,16 +22,16 @@ import java.awt.event.ActionListener;
 
 public class ButtonActionListener implements ActionListener {
 	private String command;
-	private IsNotVNC isNotVNC;
+	private Communication comm;
 	
-	public ButtonActionListener(String command, IsNotVNC isNotVNC) {
+	public ButtonActionListener(String command, Communication comm) {
 		super();
 		this.command=command;
-		this.isNotVNC=isNotVNC;
+		this.comm=comm;
 	}
 
 	public void actionPerformed(ActionEvent e) {
-		isNotVNC.sendCommand(command);
+		comm.sendCommand(command);
 	}
 
 }
